@@ -50,7 +50,6 @@ fun DashboardScreen(navController: NavController, onNavigateToFleet: () -> Unit)
                 MetricCard("РАСХОДЫ", "$42.3k", "32% от целевой мощности")
             }
             item {
-                // ТЕПЕРЬ ОШИБКИ НЕ БУДЕТ
                 ProfitCard("$100.5k")
             }
             item {

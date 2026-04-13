@@ -22,6 +22,30 @@ data class VehicleReportData(
 
 object VehicleReportGenerator {
 
+    private fun wrapText(text: String, paint: Paint, maxWidth: Float): List<String> {
+        if (text.isEmpty()) return listOf("")
+        val lines = mutableListOf<String>()
+        val words = text.split(" ")
+        var currentLine = ""
+        for (word in words) {
+            val testLine = if (currentLine.isEmpty()) word else "$currentLine $word"
+            if (paint.measureText(testLine) <= maxWidth) {
+                currentLine = testLine
+            } else {
+                if (currentLine.isNotEmpty()) {
+                    lines.add(currentLine)
+                    currentLine = word
+                } else {
+                    // Single word is too long, just add it
+                    lines.add(word)
+                    currentLine = ""
+                }
+            }
+        }
+        if (currentLine.isNotEmpty()) lines.add(currentLine)
+        return lines
+    }
+
     fun generateCommonReport(
         context: Context,
         reportsData: List<VehicleReportData>,
@@ -88,7 +112,7 @@ object VehicleReportGenerator {
 
         // Header
         canvas.drawLine(margin, y - 10f, pageWidth - margin, y - 10f, linePaint)
-        canvas.drawText("Автомобиль", margin, y, boldTextPaint)
+        canvas.drawText("Авто / Госномер", margin, y, boldTextPaint)
         canvas.drawText("Аренда", margin + 140f, y, boldTextPaint)
         canvas.drawText("Управление", margin + 210f, y, boldTextPaint)
         canvas.drawText("Расходы", margin + 280f, y, boldTextPaint)
@@ -103,7 +127,7 @@ object VehicleReportGenerator {
         var grandTotalOwnerRevenue = 0
 
         reportsData.forEach { data ->
-            checkNewPage(20f)
+            checkNewPage(35f)
             
             var vehicleIncome = 0
             var vehicleService = 0
@@ -118,7 +142,12 @@ object VehicleReportGenerator {
             val vehicleExpenses = data.expenses.sumOf { it.amount }
             val ownerRevenue = vehicleIncome - vehicleService - vehicleExpenses
 
-            canvas.drawText(data.vehicle.name, margin, y, textPaint)
+            // Row Title: Name on line 1, Plate on line 2
+            val displayName = if (data.vehicle.name.length > 25) data.vehicle.name.substring(0, 22) + "..." else data.vehicle.name
+            canvas.drawText(displayName, margin, y, textPaint)
+            canvas.drawText(data.vehicle.plateNumber, margin, y + 12f, textPaint)
+
+            // Other columns aligned with line 1
             canvas.drawText("$vehicleIncome ₽", margin + 140f, y, textPaint)
             canvas.drawText("$vehicleService ₽", margin + 210f, y, textPaint)
             canvas.drawText("$vehicleExpenses ₽", margin + 280f, y, textPaint)
@@ -128,7 +157,7 @@ object VehicleReportGenerator {
             grandTotalService += vehicleService
             grandTotalExpenses += vehicleExpenses
             grandTotalOwnerRevenue += ownerRevenue
-            y += 15f
+            y += 30f
         }
 
         canvas.drawLine(margin, y - 10f, pageWidth - margin, y - 10f, linePaint)
@@ -153,12 +182,14 @@ object VehicleReportGenerator {
             // Financial Totals
             data.totalStats?.let {
                 checkNewPage(80f)
-                canvas.drawText("ФИНАНСОВЫЕ ПОКАЗАТЕЛИ ЗА ВЕСЬ ПЕРИОД", margin, y, boldTextPaint)
+                canvas.drawText("ФИНАНСОВЫЕ ПОКАЗАТЕЛИ ЗА ВСЕ ВРЕМЯ", margin, y, boldTextPaint)
                 y += 15f
                 canvas.drawText("ВЫРУЧКА: ${it.revenue} ₽ | РАСХОДЫ: ${it.expenses} ₽ | ЧИСТАЯ ПРИБЫЛЬ: ${it.profit} ₽", margin, y, textPaint)
                 y += 25f
             }
 
+            canvas.drawText("ФИНАНСОВЫЕ ДЕТАЛИ ЗА ПЕРИОД", margin, y, boldTextPaint)
+            y += 25f
             // Expenses Table
             checkNewPage(60f)
             canvas.drawText("РАСХОДЫ", margin, y, boldTextPaint)
@@ -176,19 +207,27 @@ object VehicleReportGenerator {
 
             var totalExp = 0
             data.expenses.forEach { exp ->
-                checkNewPage(20f)
                 val formattedDate = try {
                     val d = isoSdf.parse(exp.date)
                     if (d != null) dotSdf.format(d) else exp.date
                 } catch (e: Exception) { exp.date }
 
+                val descWidth = pageWidth - margin - 60f - (margin + 180f) - 10f
+                val wrappedLines = wrapText(exp.title, textPaint, descWidth)
+                val itemHeight = maxOf(1, wrappedLines.size) * 15f
+
+                checkNewPage(itemHeight)
+
                 canvas.drawText(formattedDate, margin, y, textPaint)
                 canvas.drawText(exp.category, margin + 80f, y, textPaint)
-                val desc = if (exp.title.length > 30) exp.title.substring(0, 27) + "..." else exp.title
-                canvas.drawText(desc, margin + 180f, y, textPaint)
+                
+                wrappedLines.forEachIndexed { i, line ->
+                    canvas.drawText(line, margin + 180f, y + (i * 15f), textPaint)
+                }
+                
                 canvas.drawText("${exp.amount} ₽", pageWidth - margin - 60f, y, textPaint)
                 totalExp += exp.amount
-                y += 15f
+                y += itemHeight
             }
             canvas.drawLine(margin, y - 10f, pageWidth - margin, y - 10f, linePaint)
             canvas.drawText("ИТОГО РАСХОДЫ:", margin + 180f, y + 5f, boldTextPaint)

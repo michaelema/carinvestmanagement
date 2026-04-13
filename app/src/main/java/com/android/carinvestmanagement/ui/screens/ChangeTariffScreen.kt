@@ -6,7 +6,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
@@ -90,7 +90,7 @@ fun ChangeTariffScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack, enabled = !isActionLoading) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                     }
                 }
             )
@@ -139,7 +139,7 @@ fun ChangeTariffScreen(
                     readOnly = true,
                     label = { Text("ТИП ТАРИФА (rateType)") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
                     enabled = !isActionLoading
                 )
                 ExposedDropdownMenu(
@@ -169,7 +169,7 @@ fun ChangeTariffScreen(
                     readOnly = true,
                     label = { Text("ВЫХОДНОЙ (freeDay)") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDay) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                    modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
                     enabled = isEditable
                 )
                 ExposedDropdownMenu(
