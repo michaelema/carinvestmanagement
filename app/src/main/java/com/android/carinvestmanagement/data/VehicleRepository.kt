@@ -40,7 +40,9 @@ class VehicleRepository {
                     name = (map["carBrand"] as? String ?: "Unknown") + " " + (map["model"] as? String ?: "Unknown"),
                     plateNumber = map["registrationNumber"] as? String ?: "",
                     status = map["isActive"] as? Boolean ?: false,
-                    revenue = revenueStr
+                    revenue = revenueStr,
+                    purchasePrice = (map["purchasePrice"] as? Number)?.toInt() ?: 0,
+                    entranceFee = (map["entranceFee"] as? Number)?.toInt() ?: 0
                 )
             }
         } catch (e: Exception) {
@@ -390,6 +392,41 @@ class VehicleRepository {
             TotalStats(revenue, expenses, profit)
         } catch (e: Exception) {
             null
+        }
+    }
+
+    suspend fun getDashboardStats(carId: String?, period: String, startDate: String?, endDate: String?): List<DashboardStatRecord> {
+        return try {
+            val params = mutableMapOf<String, Any>(
+                "period" to period
+            )
+            if (carId != null) params["car_id"] = carId
+            if (startDate != null) params["start_date"] = startDate
+            if (endDate != null) params["end_date"] = endDate
+
+            val result = functions
+                .getHttpsCallable("get_total_stats_by_period_oncall")
+                .call(params)
+                .await()
+
+            @Suppress("UNCHECKED_CAST")
+            val data = result.data as? List<List<Any>> ?: emptyList()
+
+            data.map { item ->
+                DashboardStatRecord(
+                    carId = item[0] as? String ?: "",
+                    date = item[1] as? String ?: "",
+                    daysInPeriod = (item[2] as? Number)?.toInt() ?: 0,
+                    rent = (item[3] as? Number)?.toInt() ?: 0,
+                    expenses = (item[4] as? Number)?.toInt() ?: 0,
+                    serviceFees = (item[5] as? Number)?.toInt() ?: 0,
+                    rateReductions = (item[6] as? Number)?.toInt() ?: 0,
+                    serviceFeeReductions = (item[7] as? Number)?.toInt() ?: 0,
+                    totalProfit = (item[8] as? Number)?.toInt() ?: 0
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 }

@@ -5,5 +5,7 @@ data class Vehicle(
     val name: String,
     val plateNumber: String,
     val status: Boolean,
-    val revenue: String
+    val revenue: String,
+    val purchasePrice: Int,
+    val entranceFee: Int
 )

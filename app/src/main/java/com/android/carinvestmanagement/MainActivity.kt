@@ -90,9 +90,7 @@ fun AppNavigation(sharedUri: Uri?, onConsumed: () -> Unit) {
         }
 
         composable("dashboard") {
-            DashboardScreen(navController,
-                onNavigateToFleet = { navController.navigate("fleet_list") }
-            )
+            DashboardScreen(navController, viewModel = fleetViewModel)
         }
 
         composable("fleet_list") {

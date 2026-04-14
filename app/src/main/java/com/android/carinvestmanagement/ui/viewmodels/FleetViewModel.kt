@@ -2,13 +2,7 @@ package com.android.carinvestmanagement.ui.viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.android.carinvestmanagement.data.Expense
-import com.android.carinvestmanagement.data.Rate
-import com.android.carinvestmanagement.data.RateReduction
-import com.android.carinvestmanagement.data.StatRecord
-import com.android.carinvestmanagement.data.TotalStats
-import com.android.carinvestmanagement.data.Vehicle
-import com.android.carinvestmanagement.data.VehicleRepository
+import com.android.carinvestmanagement.data.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,6 +50,13 @@ class FleetViewModel(val repository: VehicleRepository = VehicleRepository()) : 
 
     private val _isIncomeDetailLoading = MutableStateFlow(false)
     val isIncomeDetailLoading: StateFlow<Boolean> = _isIncomeDetailLoading.asStateFlow()
+
+    // Dashboard State
+    private val _dashboardStats = MutableStateFlow<List<DashboardStatRecord>>(emptyList())
+    val dashboardStats: StateFlow<List<DashboardStatRecord>> = _dashboardStats.asStateFlow()
+
+    private val _isDashboardLoading = MutableStateFlow(false)
+    val isDashboardLoading: StateFlow<Boolean> = _isDashboardLoading.asStateFlow()
 
     init {
         fetchVehicles()
@@ -239,6 +240,14 @@ class FleetViewModel(val repository: VehicleRepository = VehicleRepository()) : 
                 onSuccess()
             }
             _isActionLoading.value = false
+        }
+    }
+
+    fun fetchDashboardStats(carId: String?, period: String, startDate: String?, endDate: String?) {
+        viewModelScope.launch {
+            _isDashboardLoading.value = true
+            _dashboardStats.value = repository.getDashboardStats(carId, period, startDate, endDate)
+            _isDashboardLoading.value = false
         }
     }
 }
