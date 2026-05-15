@@ -15,7 +15,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     object Fleet : Screen("fleet_list", "ПАРК", Icons.Default.DirectionsCar)
     object Dashboard : Screen("dashboard", "АНАЛИТИКА", Icons.Default.InsertChart)
     object AddVehicle : Screen("add_vehicle", "ДОБАВИТЬ", Icons.Default.AddCircle)
-    object Tariffs : Screen("dashboard"/*"tariffs"*/, "ТАРИФЫ", Icons.Default.Payments)
+    object Persons : Screen("person_list", "КЛИЕНТЫ", Icons.Default.People)
     object History : Screen("dashboard"/*"history"*/, "ИСТОРИЯ", Icons.Default.History)
 }
 
@@ -24,9 +24,9 @@ fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
         Screen.Fleet,
         Screen.Dashboard,
-        Screen.AddVehicle,
-        Screen.Tariffs,
-        Screen.History,
+//        Screen.AddVehicle,
+        Screen.Persons,
+//        Screen.History,
     )
     NavigationBar {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -38,16 +38,10 @@ fun BottomNavigationBar(navController: NavController) {
                 selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                 onClick = {
                     navController.navigate(screen.route) {
-                        // Pop up to the start destination of the graph to
-                        // avoid building up a large stack of destinations
-                        // on the back stack as users select items
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
-                        // Avoid multiple copies of the same destination when
-                        // reselecting the same item
                         launchSingleTop = true
-                        // Restore state when reselecting a previously selected item
                         restoreState = true
                     }
                 }

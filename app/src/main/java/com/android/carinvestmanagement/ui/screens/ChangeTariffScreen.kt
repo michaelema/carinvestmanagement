@@ -7,16 +7,19 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.android.carinvestmanagement.ui.components.AddPersonDialog
 import com.android.carinvestmanagement.ui.viewmodels.FleetViewModel
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -35,6 +38,7 @@ fun ChangeTariffScreen(
     val isActionLoading by viewModel.isActionLoading.collectAsState()
     val rate by viewModel.selectedVehicleRate.collectAsState()
     val selectedVehicle by viewModel.selectedVehicle.collectAsState()
+    val allPersons by viewModel.allPersons.collectAsState()
 
     val calendar = remember { Calendar.getInstance() }
     var selectedDate by remember { mutableStateOf(calendar.time) }
@@ -46,6 +50,7 @@ fun ChangeTariffScreen(
     var rateType by remember { mutableStateOf(rate?.rateType ?: "Рента") }
     var rentPrice by remember { mutableStateOf(rate?.rentPrice?.toString() ?: "") }
     var serviceFee by remember { mutableStateOf(rate?.serviceFee?.toString() ?: "400") }
+    var selectedLeaserId by remember { mutableStateOf(rate?.leaser ?: "") }
 
     val weekDays = listOf(
         "0" to "Без выходных",
@@ -57,12 +62,27 @@ fun ChangeTariffScreen(
         "6" to "Суббота",
         "7" to "Воскресенье"
     )
-    val rentTypes = listOf("Рента", "Пересдача")
+    val rentTypes = listOf("Рента", "Пересдача", "Ремонт")
     var expandedDay by remember { mutableStateOf(false) }
     var expandedType by remember { mutableStateOf(false) }
+    var expandedLeaser by remember { mutableStateOf(false) }
+    var showAddPersonDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(vehicleId) {
         viewModel.getVehicleById(vehicleId)
+        viewModel.fetchRate(vehicleId)
+        viewModel.fetchPersons()
+    }
+
+    LaunchedEffect(rate) {
+        rate?.let {
+            freeDay = it.freeDay
+            rateDescription = it.rateDescription
+            rateType = it.rateType
+            rentPrice = it.rentPrice.toString()
+            serviceFee = it.serviceFee.toString()
+            selectedLeaserId = it.leaser
+        }
     }
 
     LaunchedEffect(rateType) {
@@ -71,10 +91,29 @@ fun ChangeTariffScreen(
             rateDescription = "Пересдача"
             rentPrice = "0"
             serviceFee = "0"
+        } else if (rateType == "Ремонт") {
+            freeDay = "0"
+            rateDescription = "Сложный ремонт"
+            rentPrice = "0"
+            serviceFee = "0"
         }
     }
 
-    val isEditable = !isActionLoading && rateType != "Пересдача"
+    val isEditable = !isActionLoading && rateType != "Пересдача" && rateType != "Ремонт"
+
+    if (showAddPersonDialog) {
+        AddPersonDialog(
+            onDismiss = { showAddPersonDialog = false },
+            onConfirm = { person ->
+                viewModel.createPersonAndGetId(person) { id ->
+                    if (id != null) {
+                        selectedLeaserId = id
+                    }
+                    showAddPersonDialog = false
+                }
+            }
+        )
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
@@ -109,7 +148,7 @@ fun ChangeTariffScreen(
                 value = displaySdf.format(selectedDate),
                 onValueChange = {},
                 readOnly = true,
-                label = { Text("ДАТА НАЧАЛА (rate_date)") },
+                label = { Text("ДАТА НАЧАЛА") },
                 trailingIcon = {
                     IconButton(onClick = {
                         val cal = Calendar.getInstance().apply { time = selectedDate }
@@ -128,6 +167,60 @@ fun ChangeTariffScreen(
                 enabled = !isActionLoading
             )
 
+            // Арендатор (Leaser)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ExposedDropdownMenuBox(
+                    expanded = expandedLeaser,
+                    onExpandedChange = { if (!isActionLoading) expandedLeaser = !expandedLeaser },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    val currentLeaser = allPersons.find { it.id == selectedLeaserId }
+                    val leaserLabel = if (currentLeaser != null) {
+                        "${currentLeaser.lastName} ${currentLeaser.firstName}"
+                    } else {
+                        "Выберите арендатора"
+                    }
+
+                    OutlinedTextField(
+                        value = leaserLabel,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("АРЕНДАТОР") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedLeaser) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
+                        enabled = !isActionLoading
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedLeaser,
+                        onDismissRequest = { expandedLeaser = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Без арендатора") },
+                            onClick = {
+                                selectedLeaserId = ""
+                                expandedLeaser = false
+                            }
+                        )
+                        allPersons.forEach { person ->
+                            DropdownMenuItem(
+                                text = { Text("${person.lastName} ${person.firstName}") },
+                                onClick = {
+                                    selectedLeaserId = person.id
+                                    expandedLeaser = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                IconButton(
+                    onClick = { showAddPersonDialog = true },
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Новый клиент")
+                }
+            }
+
             // Тип тарифа
             ExposedDropdownMenuBox(
                 expanded = expandedType,
@@ -137,7 +230,7 @@ fun ChangeTariffScreen(
                     value = rateType,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("ТИП ТАРИФА (rateType)") },
+                    label = { Text("ТИП ТАРИФА") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
                     enabled = !isActionLoading
@@ -167,7 +260,7 @@ fun ChangeTariffScreen(
                     value = weekDays.find { it.first == freeDay }?.second ?: "Выберите день",
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text("ВЫХОДНОЙ (freeDay)") },
+                    label = { Text("ВЫХОДНОЙ") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDay) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, true),
                     enabled = isEditable
@@ -192,16 +285,16 @@ fun ChangeTariffScreen(
             OutlinedTextField(
                 value = rateDescription,
                 onValueChange = { rateDescription = it },
-                label = { Text("ОПИСАНИЕ (rateDescription)") },
+                label = { Text("ОПИСАНИЕ") },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = isEditable
+                enabled = true
             )
 
             // Цена аренды
             OutlinedTextField(
                 value = rentPrice,
                 onValueChange = { rentPrice = it },
-                label = { Text("ЦЕНА АРЕНДЫ (rentPrice)") },
+                label = { Text("ЦЕНА АРЕНДЫ") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = isEditable
@@ -211,7 +304,7 @@ fun ChangeTariffScreen(
             OutlinedTextField(
                 value = serviceFee,
                 onValueChange = { serviceFee = it },
-                label = { Text("СЕРВИСНЫЙ СБОР (serviceFee)") },
+                label = { Text("СЕРВИСНЫЙ СБОР") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
                 enabled = isEditable
@@ -238,6 +331,7 @@ fun ChangeTariffScreen(
                         rateType = rateType,
                         rentPrice = priceInt,
                         serviceFee = feeInt,
+                        leaserId = if (selectedLeaserId.isNotEmpty()) selectedLeaserId else null,
                         onSuccess = {
                             onBack()
                         },

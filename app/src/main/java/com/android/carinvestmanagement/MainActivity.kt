@@ -17,6 +17,7 @@ import androidx.navigation.navArgument
 import com.android.carinvestmanagement.ui.screens.*
 import com.android.carinvestmanagement.ui.theme.VelocityFleetTheme
 import com.android.carinvestmanagement.ui.viewmodels.FleetViewModel
+import com.android.carinvestmanagement.ui.viewmodels.PersonViewModel
 import java.io.File
 import java.io.FileOutputStream
 
@@ -70,6 +71,7 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation(sharedUri: Uri?, onConsumed: () -> Unit) {
     val navController = rememberNavController()
     val fleetViewModel: FleetViewModel = viewModel()
+    val personViewModel: PersonViewModel = viewModel()
 
     LaunchedEffect(sharedUri) {
         if (sharedUri != null) {
@@ -99,6 +101,22 @@ fun AppNavigation(sharedUri: Uri?, onConsumed: () -> Unit) {
                     navController.navigate("vehicle_details/$vehicleId")
                 },
                 viewModel = fleetViewModel
+            )
+        }
+
+        composable("person_list") {
+            PersonListScreen(navController, viewModel = personViewModel)
+        }
+
+        composable(
+            route = "person_details/{personId}",
+            arguments = listOf(navArgument("personId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val personId = backStackEntry.arguments?.getString("personId") ?: ""
+            PersonDetailsScreen(
+                personId = personId,
+                onBack = { navController.popBackStack() },
+                viewModel = personViewModel
             )
         }
 

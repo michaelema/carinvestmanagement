@@ -8,5 +8,6 @@ data class Rate(
     val freeDay: String,
     val rateType: String,
     val rateId: String,
-    val rentRecordId: String
+    val rentRecordId: String,
+    val leaser: String
 )

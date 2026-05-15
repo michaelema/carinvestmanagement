@@ -7,5 +7,10 @@ data class Vehicle(
     val status: Boolean,
     val revenue: String,
     val purchasePrice: Int,
-    val entranceFee: Int
+    val entranceFee: Int,
+    val rateType: String = "",
+    val rentPrice: Int = 0,
+    val serviceFee: Int = 0,
+    val leaserName: String = "",
+    val leaserPhone: String = ""
 )

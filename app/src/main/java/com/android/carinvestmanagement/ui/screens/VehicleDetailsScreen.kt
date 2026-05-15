@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.android.carinvestmanagement.data.Person
 import com.android.carinvestmanagement.ui.viewmodels.FleetUiState
 import com.android.carinvestmanagement.ui.viewmodels.FleetViewModel
 import com.android.carinvestmanagement.utils.VehicleReportGenerator
@@ -47,6 +48,8 @@ fun VehicleDetailsScreen(
     val managementStats by viewModel.managementStats.collectAsState()
     val isStatsLoading by viewModel.isStatsLoading.collectAsState()
     val totalStats by viewModel.totalStats.collectAsState()
+    val leaser by viewModel.leaser.collectAsState()
+    val isLeaserLoading by viewModel.isLeaserLoading.collectAsState()
 
     val context = LocalContext.current
     val displaySdf = remember { SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()) }
@@ -76,6 +79,14 @@ fun VehicleDetailsScreen(
     LaunchedEffect(vehicleId) {
         viewModel.fetchRate(vehicleId)
         viewModel.fetchTotalStats(vehicleId)
+    }
+
+    LaunchedEffect(rate) {
+        rate?.let {
+            if (it.leaser.isNotEmpty()) {
+                viewModel.fetchLeaser(it.leaser)
+            }
+        }
     }
 
     Scaffold(
@@ -113,9 +124,9 @@ fun VehicleDetailsScreen(
                     }) {
                         Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF Отчет")
                     }
-                    IconButton(onClick = { /* Редактировать */ }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Редактировать")
-                    }
+//                    IconButton(onClick = { /* Редактировать */ }) {
+//                        Icon(Icons.Default.Edit, contentDescription = "Редактировать")
+//                    }
                 }
             )
         }
@@ -253,6 +264,68 @@ fun VehicleDetailsScreen(
                                     }
                                 }
                             }
+                        }
+
+                        // Leaser Info Section
+                        Spacer(Modifier.height(24.dp))
+                        Text("АРЕНДАТОР", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        
+                        if (isLeaserLoading) {
+                            Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            }
+                        } else if (leaser != null) {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                                    .clickable { navController.navigate("person_details/${leaser!!.id}") },
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Surface(
+                                        modifier = Modifier.size(40.dp),
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                Icons.Default.Person, 
+                                                contentDescription = null, 
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+                                    }
+
+                                    Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+                                        Text(
+                                            text = "${leaser!!.lastName} ${leaser!!.firstName} ${leaser!!.patronymic}",
+                                            fontWeight = FontWeight.Bold,
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text(
+                                            text = "Документ: ${leaser!!.documentNumber}",
+                                            color = Color.Gray,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                        Text(
+                                            text = "Тел: ${leaser!!.phoneNumber}",
+                                            color = Color.Gray,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+                                }
+                            }
+                        } else if (rate!!.leaser.isNotEmpty()) {
+                            Text("Загрузка данных арендатора...", modifier = Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                        } else {
+                            Text("Арендатор не назначен", modifier = Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
                         }
                     } else {
                         Text("Данные о тарифе отсутствуют", modifier = Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.bodyMedium, color = Color.Gray)

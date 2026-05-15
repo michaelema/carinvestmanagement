@@ -3,12 +3,17 @@ package com.android.carinvestmanagement.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.carinvestmanagement.data.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class FleetViewModel(val repository: VehicleRepository = VehicleRepository()) : ViewModel() {
+class FleetViewModel(
+    val repository: VehicleRepository = VehicleRepository(),
+    private val personRepository: PersonRepository = PersonRepository()
+) : ViewModel() {
     private val _uiState = MutableStateFlow<FleetUiState>(FleetUiState.Loading)
     val uiState: StateFlow<FleetUiState> = _uiState.asStateFlow()
 
@@ -58,19 +63,50 @@ class FleetViewModel(val repository: VehicleRepository = VehicleRepository()) : 
     private val _isDashboardLoading = MutableStateFlow(false)
     val isDashboardLoading: StateFlow<Boolean> = _isDashboardLoading.asStateFlow()
 
+    // Leaser State
+    private val _leaser = MutableStateFlow<Person?>(null)
+    val leaser: StateFlow<Person?> = _leaser.asStateFlow()
+
+    private val _isLeaserLoading = MutableStateFlow(false)
+    val isLeaserLoading: StateFlow<Boolean> = _isLeaserLoading.asStateFlow()
+
+    private val _allPersons = MutableStateFlow<List<Person>>(emptyList())
+    val allPersons: StateFlow<List<Person>> = _allPersons.asStateFlow()
+
     init {
         fetchVehicles()
+        fetchPersons()
     }
 
     fun fetchVehicles() {
         viewModelScope.launch {
             _uiState.value = FleetUiState.Loading
             val vehicles = repository.getVehicles()
-            _uiState.value = if (vehicles.isEmpty()) {
-                FleetUiState.Error("No vehicles found or error occurred")
+            if (vehicles.isEmpty()) {
+                _uiState.value = FleetUiState.Error("No vehicles found or error occurred")
             } else {
-                FleetUiState.Success(vehicles)
+                // Fetch rates for each vehicle in parallel
+                val vehiclesWithRates = vehicles.map { vehicle ->
+                    async {
+                        val rate = repository.getRate(vehicle.id)
+                        val leaser = personRepository.getPerson(rate?.leaser ?: "")
+                        vehicle.copy(
+                            rateType = rate?.rateType ?: "Нет тарифа",
+                            rentPrice = rate?.rentPrice ?: 0,
+                            serviceFee = rate?.serviceFee ?: 0,
+                            leaserName = (leaser?.firstName ?: "") + " " + (leaser?.lastName ?: ""),
+                            leaserPhone = leaser?.phoneNumber ?: ""
+                        )
+                    }
+                }.awaitAll()
+                _uiState.value = FleetUiState.Success(vehiclesWithRates)
             }
+        }
+    }
+
+    fun fetchPersons() {
+        viewModelScope.launch {
+            _allPersons.value = personRepository.getAllPersons()
         }
     }
 
@@ -93,8 +129,21 @@ class FleetViewModel(val repository: VehicleRepository = VehicleRepository()) : 
     fun fetchRate(vehicleId: String) {
         viewModelScope.launch {
             _isRateLoading.value = true
-            _selectedVehicleRate.value = repository.getRate(vehicleId)
+            val rate = repository.getRate(vehicleId)
+            _selectedVehicleRate.value = rate
             _isRateLoading.value = false
+        }
+    }
+
+    fun fetchLeaser(personId: String) {
+        if (personId.isEmpty() || personId == "none") {
+            _leaser.value = null
+            return
+        }
+        viewModelScope.launch {
+            _isLeaserLoading.value = true
+            _leaser.value = personRepository.getPerson(personId)
+            _isLeaserLoading.value = false
         }
     }
 
@@ -204,17 +253,17 @@ class FleetViewModel(val repository: VehicleRepository = VehicleRepository()) : 
         rateType: String,
         rentPrice: Int,
         serviceFee: Int,
+        leaserId: String? = null,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
         viewModelScope.launch {
             _isActionLoading.value = true
             val success = repository.createOrUpdateRateRecord(
-                rentRecordId, rateId, rateDate, freeDay, rateDescription, rateType, rentPrice, serviceFee
+                rentRecordId, rateId, rateDate, freeDay, rateDescription, rateType, rentPrice, serviceFee, leaserId
             )
             _isActionLoading.value = false
             if (success) {
-                fetchRate("")
                 onSuccess()
             } else {
                 onError("Ошибка при сохранении тарифа")
@@ -248,6 +297,16 @@ class FleetViewModel(val repository: VehicleRepository = VehicleRepository()) : 
             _isDashboardLoading.value = true
             _dashboardStats.value = repository.getDashboardStats(carId, period, startDate, endDate)
             _isDashboardLoading.value = false
+        }
+    }
+
+    fun createPersonAndGetId(person: Person, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            val id = personRepository.createPerson(person)
+            if (id != null) {
+                fetchPersons()
+            }
+            onResult(id)
         }
     }
 }

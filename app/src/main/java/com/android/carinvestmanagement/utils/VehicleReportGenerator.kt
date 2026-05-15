@@ -112,11 +112,11 @@ object VehicleReportGenerator {
 
         // Header
         canvas.drawLine(margin, y - 10f, pageWidth - margin, y - 10f, linePaint)
-        canvas.drawText("Авто / Госномер", margin, y, boldTextPaint)
-        canvas.drawText("Аренда", margin + 140f, y, boldTextPaint)
-        canvas.drawText("Управление", margin + 210f, y, boldTextPaint)
-        canvas.drawText("Расходы", margin + 280f, y, boldTextPaint)
-        canvas.drawText("Прибыль собств.", margin + 360f, y, boldTextPaint)
+        canvas.drawText("Автомобиль / Госномер", margin, y, boldTextPaint)
+        canvas.drawText("Аренда", margin + 180f, y, boldTextPaint)
+        canvas.drawText("Управление", margin + 250f, y, boldTextPaint)
+        canvas.drawText("Расходы", margin + 320f, y, boldTextPaint)
+        canvas.drawText("Прибыль собств.", margin + 390f, y, boldTextPaint)
         y += 5f
         canvas.drawLine(margin, y, pageWidth - margin, y, linePaint)
         y += 15f
@@ -127,7 +127,7 @@ object VehicleReportGenerator {
         var grandTotalOwnerRevenue = 0
 
         reportsData.forEach { data ->
-            checkNewPage(35f)
+            checkNewPage(20f)
             
             var vehicleIncome = 0
             var vehicleService = 0
@@ -142,30 +142,30 @@ object VehicleReportGenerator {
             val vehicleExpenses = data.expenses.sumOf { it.amount }
             val ownerRevenue = vehicleIncome - vehicleService - vehicleExpenses
 
-            // Row Title: Name on line 1, Plate on line 2
-            val displayName = if (data.vehicle.name.length > 25) data.vehicle.name.substring(0, 22) + "..." else data.vehicle.name
-            canvas.drawText(displayName, margin, y, textPaint)
-            canvas.drawText(data.vehicle.plateNumber, margin, y + 12f, textPaint)
+            // Row Title: Name and Plate on one line
+            val vehicleInfo = "${data.vehicle.name} (${data.vehicle.plateNumber})"
+            val displayVehicle = if (vehicleInfo.length > 40) vehicleInfo.substring(0, 37) + "..." else vehicleInfo
+            canvas.drawText(displayVehicle, margin, y, textPaint)
 
-            // Other columns aligned with line 1
-            canvas.drawText("$vehicleIncome ₽", margin + 140f, y, textPaint)
-            canvas.drawText("$vehicleService ₽", margin + 210f, y, textPaint)
-            canvas.drawText("$vehicleExpenses ₽", margin + 280f, y, textPaint)
-            canvas.drawText("$ownerRevenue ₽", margin + 360f, y, textPaint)
+            // Other columns shifted right
+            canvas.drawText("$vehicleIncome ₽", margin + 180f, y, textPaint)
+            canvas.drawText("$vehicleService ₽", margin + 250f, y, textPaint)
+            canvas.drawText("$vehicleExpenses ₽", margin + 320f, y, textPaint)
+            canvas.drawText("$ownerRevenue ₽", margin + 390f, y, textPaint)
 
             grandTotalIncome += vehicleIncome
             grandTotalService += vehicleService
             grandTotalExpenses += vehicleExpenses
             grandTotalOwnerRevenue += ownerRevenue
-            y += 30f
+            y += 15f
         }
 
         canvas.drawLine(margin, y - 10f, pageWidth - margin, y - 10f, linePaint)
         canvas.drawText("ИТОГО:", margin, y + 5f, boldTextPaint)
-        canvas.drawText("$grandTotalIncome ₽", margin + 140f, y + 5f, boldTextPaint)
-        canvas.drawText("$grandTotalService ₽", margin + 210f, y + 5f, boldTextPaint)
-        canvas.drawText("$grandTotalExpenses ₽", margin + 280f, y + 5f, boldTextPaint)
-        canvas.drawText("$grandTotalOwnerRevenue ₽", margin + 360f, y + 5f, boldTextPaint)
+        canvas.drawText("$grandTotalIncome ₽", margin + 180f, y + 5f, boldTextPaint)
+        canvas.drawText("$grandTotalService ₽", margin + 250f, y + 5f, boldTextPaint)
+        canvas.drawText("$grandTotalExpenses ₽", margin + 320f, y + 5f, boldTextPaint)
+        canvas.drawText("$grandTotalOwnerRevenue ₽", margin + 390f, y + 5f, boldTextPaint)
         y += 50f
 
         // INDIVIDUAL VEHICLE DETAILS

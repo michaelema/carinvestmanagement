@@ -169,7 +169,8 @@ class VehicleRepository {
             rateType = rate["rateType"] as? String ?: "",
             freeDay = (rate["freeDay"] as? Number)?.toString() ?: "",
             rateId = rate["id"] as? String ?: "",
-            rentRecordId = rentRecord["id"] as? String ?: ""
+            rentRecordId = rentRecord["id"] as? String ?: "",
+            leaser = rentRecord["leaser"] as? String ?: ""
         )
     }
 
@@ -254,21 +255,25 @@ class VehicleRepository {
         rateDescription: String,
         rateType: String,
         rentPrice: Int,
-        serviceFee: Int
+        serviceFee: Int,
+        leaserId: String? = null
     ): Boolean {
         return try {
+            val params = mutableMapOf<String, Any>(
+                "rent_record_id" to rentRecordId,
+                "rate_id" to rateId,
+                "rate_date" to rateDate,
+                "freeDay" to freeDay,
+                "rateDescription" to rateDescription,
+                "rateType" to rateType,
+                "rentPrice" to rentPrice,
+                "serviceFee" to serviceFee
+            )
+            if (leaserId != null) params["leaser"] = leaserId
+
             functions
                 .getHttpsCallable("create_or_update_rate_record_oncall")
-                .call(mapOf(
-                    "rent_record_id" to rentRecordId,
-                    "rate_id" to rateId,
-                    "rate_date" to rateDate,
-                    "freeDay" to freeDay,
-                    "rateDescription" to rateDescription,
-                    "rateType" to rateType,
-                    "rentPrice" to rentPrice,
-                    "serviceFee" to serviceFee
-                ))
+                .call(params)
                 .await()
             true
         } catch (e: Exception) {

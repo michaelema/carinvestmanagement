@@ -276,10 +276,37 @@ fun VehicleListItem(vehicle: Vehicle, onClick: () -> Unit) {
                 StatusBadge(vehicle.status)
             }
 
-//            Column(horizontalAlignment = Alignment.End) {
-//                Text("Выручка", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-//                Text(vehicle.revenue, fontWeight = FontWeight.ExtraBold, color = Color(0xFF0052CC))
-//            }
+            val tariffColor = if (vehicle.rateType == "Рента") Color(0xFF22C55E) else Color(0xFFF59E0B)
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = vehicle.leaserName,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = vehicle.leaserPhone,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = vehicle.rateType,
+                    color = tariffColor,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "${vehicle.rentPrice} / ${vehicle.serviceFee} ₽",
+                    color = tariffColor,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }
